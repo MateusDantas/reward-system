@@ -1,5 +1,5 @@
 module Tree (
-  Node (Node, key),
+  Node (Node, key, mdata, childs),
   Edge (Edge, src, dst),
   Tree (Tree),
   NodeKey,
@@ -7,11 +7,13 @@ module Tree (
   singleton,
   insertNode,
   updateNode,
+  rootUpdate,
   insertEdge,
   findNode
 ) where
 
 import Data.Foldable
+import Data.Maybe
 import qualified Data.IntMap.Strict as IntMap
 
 -- The key must be a unique identifier (i.e Each node must have its own key)
@@ -38,7 +40,7 @@ instance Foldable Tree where
   toList (Tree nodes) = map (\(_, node) -> (mdata node)) (IntMap.toList nodes)
 
 -------------------------------------------------------------------------------
---  Constructor
+-- | Constructor
 -------------------------------------------------------------------------------
 
 empty :: Tree a
@@ -48,7 +50,7 @@ singleton :: Node a -> Tree a
 singleton node = Tree $ (IntMap.singleton (key node) node)
 
 -------------------------------------------------------------------------------
---  Mutator
+-- | Mutator
 -------------------------------------------------------------------------------
 
 insertNode :: Node a -> Tree a -> Tree a
@@ -68,12 +70,21 @@ insertEdge (Edge src dst) tree =
   let tree' = insertNode dst tree
   in Tree (IntMap.update (insertChild (key dst)) (key src) (nodes tree'))
 
+rootUpdate :: (Tree a -> Node a -> Node a) -> NodeKey -> Tree a -> Tree a
+rootUpdate _ _ Empty = Empty
+rootUpdate f nKey tree =
+  let mNode = IntMap.lookup nKey (nodes tree)
+  in case (mNode) of
+    Nothing -> tree
+    Just x ->
+      rootUpdate f (parent x) (Tree (IntMap.insert nKey (f tree x) (nodes tree)))
+
 insertChild :: NodeKey -> Node a -> Maybe (Node a)
 insertChild nKey node = Just node {childs = nKey:(childs node)}
 
 -------------------------------------------------------------------------------
---  Query
+-- | Query
 -------------------------------------------------------------------------------
-findNode :: NodeKey -> Tree a -> Maybe (Node a)
-findNode _ Empty = Nothing
-findNode nKey tree = IntMap.lookup nKey (nodes tree)
+findNode :: NodeKey -> Maybe (Tree a) -> Maybe (Node a)
+findNode _ Nothing = Nothing
+findNode nKey (Just tree) = IntMap.lookup nKey (nodes tree)

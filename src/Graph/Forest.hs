@@ -1,6 +1,17 @@
-module Forest where
+module Forest (
+  Forest (Forest),
+  empty,
+  singleton,
+  insertEdge,
+  insertNode,
+  updateNode,
+  rootUpdate,
+  hasNode,
+  findNode
+) where
 
 import Data.Foldable
+import Data.Maybe
 import qualified Data.IntMap.Strict as IntMap
 import qualified Tree as Tree
 
@@ -11,10 +22,11 @@ data Forest a = Empty | Forest {
 
 instance Foldable Forest where
   toList Empty = []
-  toList (Forest trees _) = concatMap (\x -> toList x) $ trees
+  toList (Forest trees _) =
+    concatMap (\(_, x) -> toList x) $ (IntMap.toList trees)
 
 -------------------------------------------------------------------------------
---  Constructor
+-- | Constructor
 -------------------------------------------------------------------------------
 
 empty :: Maybe (Forest a)
@@ -24,41 +36,68 @@ singleton :: Maybe (Forest a)
 singleton = Just (Forest {trees = IntMap.empty, nodeMap = IntMap.empty})
 
 -------------------------------------------------------------------------------
---  Mutator
+-- | Mutator
 -------------------------------------------------------------------------------
 
 insertEdge :: Tree.Edge a -> Forest a -> Maybe (Forest a)
 insertEdge edge Empty =
-  insertTree (Tree.src edge) Empty >>= insertEdge edge
+  insertNode (Tree.src edge) Empty >>= insertEdge edge
 insertEdge (Tree.Edge src dst) forest =
   let hasSrc = hasNode src forest
       hasDst = hasNode dst forest
   in case (hasSrc, hasDst) of
-    (False, _) -> insertTree src forest >>= insertEdge (Tree.Edge src dst)
+    (False, _) -> insertNode src forest >>= insertEdge (Tree.Edge src dst)
     (True, False) -> insertEdge' (Tree.Edge src dst) forest
     (True, True) -> Just forest
 
 insertEdge' :: Tree.Edge a -> Forest a -> Maybe (Forest a)
 insertEdge' (Tree.Edge src dst) Empty =
-  insertTree src Empty >>= insertEdge' (Tree.Edge src dst)
+  insertNode src Empty >>= insertEdge' (Tree.Edge src dst)
 insertEdge' (Tree.Edge src dst) forest =
-  let rootKey = Tree.key src
+  let rootKey = fromMaybe 0 (findRootKey (Tree.key src) forest)
       nodeMap' = IntMap.insert (Tree.key dst) rootKey (nodeMap forest)
-      f = (\x -> Just (Tree.insertEdge (Tree.Edge src dst) x))
-  in Just (Forest (IntMap.update f rootKey (trees forest)) nodeMap')
+      f = (\x -> Tree.insertEdge (Tree.Edge src dst) x)
+  in Just (Forest (IntMap.adjust f rootKey (trees forest)) nodeMap')
 
-insertTree :: Tree.Node a -> Forest a -> Maybe (Forest a)
-insertTree node Empty = singleton >>= insertTree node
-insertTree node forest =
-  let rootKey = Tree.key node
-      trees' = IntMap.insert rootKey (Tree.singleton node) (trees forest)
-      nodeMap' = IntMap.insert rootKey rootKey (nodeMap forest)
+insertNode :: Tree.Node a -> Forest a -> Maybe (Forest a)
+insertNode node Empty = singleton >>= insertNode node
+insertNode node forest =
+  let nodeKey = Tree.key node
+      trees' = IntMap.insert nodeKey (Tree.singleton node) (trees forest)
+      nodeMap' = IntMap.insert nodeKey nodeKey (nodeMap forest)
   in Just (Forest trees' nodeMap')
 
+updateNode :: (a -> a) -> Tree.Node a -> Forest a -> Maybe (Forest a)
+updateNode _ _ Empty = Nothing
+updateNode transform node forest =
+  let nodeKey = Tree.key node
+      rootKey = fromMaybe 0 (findRootKey nodeKey forest)
+      f = (\x -> Tree.updateNode transform nodeKey x)
+  in Just (Forest (IntMap.adjust f rootKey (trees forest)) (nodeMap forest))
+
+rootUpdate :: (Tree.Tree a -> Tree.Node a -> Tree.Node a) -> Tree.NodeKey -> Forest a -> Maybe (Forest a)
+rootUpdate _ _ Empty = Nothing
+rootUpdate f nodeKey forest =
+  let rootKey = fromMaybe 0 (findRootKey nodeKey forest)
+      trees' = (trees forest)
+      nodeMap' = (nodeMap forest)
+      rootF = Tree.rootUpdate f nodeKey
+  in Just (Forest (IntMap.adjust rootF rootKey trees') nodeMap')
+
 -------------------------------------------------------------------------------
---  Query
+-- | Query
 -------------------------------------------------------------------------------
 
 hasNode :: Tree.Node a -> Forest a -> Bool
 hasNode _ Empty = False
 hasNode node forest = IntMap.member (Tree.key node) (nodeMap forest)
+
+findNode :: Tree.NodeKey -> Forest a -> Maybe (Tree.Node a)
+findNode _ Empty = Nothing
+findNode nodeKey forest =
+  let rootKey = fromMaybe 0 (findRootKey nodeKey forest)
+  in Tree.findNode nodeKey (IntMap.lookup rootKey (trees forest))
+
+findRootKey :: Tree.NodeKey -> Forest a -> Maybe (Tree.NodeKey)
+findRootKey _ Empty = Nothing
+findRootKey nodeKey forest = IntMap.lookup nodeKey (nodeMap forest)
