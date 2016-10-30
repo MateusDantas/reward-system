@@ -1,4 +1,4 @@
-module Forest (
+module Graph.Forest (
   Forest (Forest),
   empty,
   singleton,
@@ -6,24 +6,19 @@ module Forest (
   insertNode,
   updateNode,
   rootUpdate,
+  toList,
   hasNode,
   findNode
 ) where
 
-import Data.Foldable
 import Data.Maybe
 import qualified Data.IntMap.Strict as IntMap
-import qualified Tree as Tree
+import qualified Graph.Tree as Tree
 
 data Forest a = Empty | Forest {
   trees :: IntMap.IntMap (Tree.Tree a),
   nodeMap :: IntMap.IntMap Tree.NodeKey
 } deriving (Show)
-
-instance Foldable Forest where
-  toList Empty = []
-  toList (Forest trees _) =
-    concatMap (\(_, x) -> toList x) $ (IntMap.toList trees)
 
 -------------------------------------------------------------------------------
 -- | Constructor
@@ -101,3 +96,8 @@ findNode nodeKey forest =
 findRootKey :: Tree.NodeKey -> Forest a -> Maybe (Tree.NodeKey)
 findRootKey _ Empty = Nothing
 findRootKey nodeKey forest = IntMap.lookup nodeKey (nodeMap forest)
+
+toList :: Forest a -> [a]
+toList Empty = []
+toList (Forest trees _) =
+  concatMap (\(_, x) -> Tree.toList x) $ (IntMap.toList trees)

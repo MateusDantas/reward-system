@@ -1,9 +1,20 @@
-module Ranking where
+{-# LANGUAGE OverloadedStrings #-}
+module Reward.Ranking (
+  MData (MData),
+  Ranking (Ranking),
+  Referral (Referral),
+  singleton,
+  insertReferrals,
+  insertReferral,
+  toList
+) where
 
+import Control.Monad
+import Data.Aeson
 import Data.Ord (comparing)
 
-import qualified Forest as Forest
-import qualified Tree as Tree
+import qualified Graph.Forest as Forest
+import qualified Graph.Tree as Tree
 
 data MData = MData {
   key :: Tree.NodeKey,
@@ -11,7 +22,7 @@ data MData = MData {
   invited :: Bool
 } deriving (Show)
 
-defaultMData = MData {score = 0.0, invited = False}
+defaultMData = MData {key = 0, score = 0.0, invited = False}
 
 data Ranking = Ranking {
   forest :: Maybe (Forest.Forest MData)
@@ -21,6 +32,9 @@ data Referral = Referral {
   src :: Tree.NodeKey,
   dst :: Tree.NodeKey
 } deriving (Show)
+
+instance ToJSON MData where
+  toJSON (MData key score invited) = object ["user" .= key, "score" .= score]
 
 instance Eq MData where
   (MData x _ _) == (MData y _ _) = x == y
@@ -39,6 +53,11 @@ singleton = Just (Ranking Forest.singleton)
 -- | Mutator
 -------------------------------------------------------------------------------
 
+insertReferrals :: [Referral] -> Ranking -> Maybe (Ranking)
+insertReferrals referrals ranking =
+  let f = (\b a -> insertReferral a b)
+  in foldM f ranking referrals
+
 insertReferral :: Referral -> Ranking -> Maybe (Ranking)
 insertReferral (Referral src dst) (Ranking forest) =
   let srcNode = Tree.Node src (defaultMData {key = src}) [] 0
@@ -55,6 +74,11 @@ updateScores nKey ranking =
 -------------------------------------------------------------------------------
 -- | Static
 -------------------------------------------------------------------------------
+
+toList :: Maybe (Ranking) -> [MData]
+toList Nothing = []
+toList (Just (Ranking Nothing)) = []
+toList (Just (Ranking (Just forest))) = Forest.toList forest
 
 scoreF :: Tree.Tree MData -> Tree.Node MData -> Tree.Node MData
 scoreF tree (Tree.Node key mdata childs parent) =

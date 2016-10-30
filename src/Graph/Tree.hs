@@ -1,4 +1,4 @@
-module Tree (
+module Graph.Tree (
   Node (Node, key, mdata, childs),
   Edge (Edge, src, dst),
   Tree (Tree),
@@ -9,10 +9,10 @@ module Tree (
   updateNode,
   rootUpdate,
   insertEdge,
-  findNode
+  findNode,
+  toList
 ) where
 
-import Data.Foldable
 import Data.Maybe
 import qualified Data.IntMap.Strict as IntMap
 
@@ -34,10 +34,6 @@ data Edge a = Edge {
 data Tree a = Empty | Tree {
   nodes :: IntMap.IntMap (Node a)
 } deriving (Show)
-
-instance Foldable Tree where
-  toList Empty = []
-  toList (Tree nodes) = map (\(_, node) -> (mdata node)) (IntMap.toList nodes)
 
 -------------------------------------------------------------------------------
 -- | Constructor
@@ -88,3 +84,7 @@ insertChild nKey node = Just node {childs = nKey:(childs node)}
 findNode :: NodeKey -> Maybe (Tree a) -> Maybe (Node a)
 findNode _ Nothing = Nothing
 findNode nKey (Just tree) = IntMap.lookup nKey (nodes tree)
+
+toList :: Tree a -> [a]
+toList Empty = []
+toList (Tree nodes) = map (\(_, node) -> (mdata node)) (IntMap.toList nodes)
