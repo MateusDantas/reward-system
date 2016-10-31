@@ -87,9 +87,9 @@ hasNode :: Tree.Node a -> Forest a -> Bool
 hasNode _ Empty = False
 hasNode node forest = IntMap.member (Tree.key node) (nodeMap forest)
 
-findNode :: Tree.NodeKey -> Forest a -> Maybe (Tree.Node a)
-findNode _ Empty = Nothing
-findNode nodeKey forest =
+findNode :: Tree.NodeKey -> Maybe (Forest a) -> Maybe (Tree.Node a)
+findNode _ Nothing = Nothing
+findNode nodeKey (Just forest) =
   let rootKey = fromMaybe 0 (findRootKey nodeKey forest)
   in Tree.findNode nodeKey (IntMap.lookup rootKey (trees forest))
 

@@ -28,10 +28,12 @@ main = do
   ranking <- newMVar Ranking.singleton
   scotty (3000) $ do
 
-    get "/" $ do
-      foo <- liftIO $ getDataFileName "src/static/index.html"
-      setHeader "Content-Type" "text/html; charset=utf-8"
-      file foo
+    get "/ranking/:uid" $ do
+      x <- liftIO $ readMVar ranking
+      uid <- param "uid"
+      let mdata = Ranking.userMData uid x
+
+      json $ (mdata :: Ranking.MData)
 
     get "/ranking" $ do
       x <- liftIO $ readMVar ranking
@@ -43,14 +45,17 @@ main = do
       x <- liftIO $ takeMVar ranking
 
       let fs' = [ fileContent fi | (fieldName,fi) <- fs ]
-      let referrals = strToReferrals (BS.unpack (head fs'))
-      let ranking' = x >>= Ranking.insertReferrals referrals
 
-      liftIO $ putMVar ranking ranking'
+      if length fs' == 0 then
+        liftIO $ putMVar ranking x
+      else
+        let referrals = strToReferrals (BS.unpack (head fs'))
+            ranking' = x >>= Ranking.insertReferrals referrals
+        in liftIO $ putMVar ranking ranking'
 
       text $ "OK"
 
-    post "/ranking/:src/:dst" $ do
+    put "/ranking/:src/:dst" $ do
       x <- liftIO $ takeMVar ranking
       src <- param "src"
       dst <- param "dst"

@@ -6,7 +6,8 @@ module Reward.Ranking (
   singleton,
   insertReferrals,
   insertReferral,
-  toList
+  toList,
+  userMData
 ) where
 
 import Control.Monad
@@ -74,6 +75,14 @@ updateScores nKey ranking =
 -------------------------------------------------------------------------------
 -- | Static
 -------------------------------------------------------------------------------
+
+userMData :: Tree.NodeKey -> Maybe (Ranking) -> MData
+userMData _ Nothing = defaultMData
+userMData nKey (Just ranking) =
+  let userNode = Forest.findNode nKey (forest ranking)
+  in case (userNode) of
+    Nothing -> defaultMData
+    Just node -> (Tree.mdata node)
 
 toList :: Maybe (Ranking) -> [MData]
 toList Nothing = []
