@@ -1,7 +1,7 @@
 module Graph.Tree (
   Node (Node, key, mdata, childs),
   Edge (Edge, src, dst),
-  Tree (Tree),
+  Tree (Tree, Empty, nodes),
   NodeKey,
   empty,
   singleton,
@@ -51,8 +51,9 @@ singleton node = Tree $ (IntMap.singleton (key node) node)
 
 insertNode :: Node a -> Tree a -> Tree a
 insertNode _ Empty = Empty
-insertNode node tree =
-  Tree (IntMap.insert (key node) node (nodes tree))
+insertNode node tree = if hasNode (key node) tree
+  then tree
+  else Tree (IntMap.insert (key node) node (nodes tree))
 
 updateNode :: (a -> a) -> NodeKey -> Tree a -> Tree a
 updateNode _ _ Empty = Empty
@@ -62,9 +63,12 @@ updateNode tr nKey tree =
 
 insertEdge :: Edge a -> Tree a -> Tree a
 insertEdge _ Empty = Empty
-insertEdge (Edge src dst) tree =
-  let tree' = insertNode dst tree
-  in Tree (IntMap.update (insertChild (key dst)) (key src) (nodes tree'))
+insertEdge (Edge src dst) tree = if (hasNode (key src) tree)
+  then
+    let dst' = dst {parent = (key src)}
+        tree' = insertNode dst' tree
+    in Tree (IntMap.update (insertChild (key dst')) (key src) (nodes tree'))
+  else tree
 
 rootUpdate :: (Tree a -> Node a -> Node a) -> NodeKey -> Tree a -> Tree a
 rootUpdate _ _ Empty = Empty
@@ -84,6 +88,10 @@ insertChild nKey node = Just node {childs = nKey:(childs node)}
 findNode :: NodeKey -> Maybe (Tree a) -> Maybe (Node a)
 findNode _ Nothing = Nothing
 findNode nKey (Just tree) = IntMap.lookup nKey (nodes tree)
+
+hasNode :: NodeKey -> Tree a -> Bool
+hasNode _ Empty = False
+hasNode nKey tree = IntMap.member nKey (nodes tree)
 
 toList :: Tree a -> [a]
 toList Empty = []

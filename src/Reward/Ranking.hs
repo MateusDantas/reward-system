@@ -37,7 +37,7 @@ instance ToJSON MData where
   toJSON (MData key score invited) = object ["user" .= key, "score" .= score]
 
 instance Eq MData where
-  (MData x _ _) == (MData y _ _) = x == y
+  (MData k s i) == (MData k' s' i') = (k == k') && (s == s') && (i == i')
 
 instance Ord MData where
   compare = comparing score

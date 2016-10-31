@@ -1,5 +1,5 @@
 module Graph.Forest (
-  Forest (Forest),
+  Forest (Forest, trees),
   empty,
   singleton,
   insertEdge,

@@ -17,6 +17,7 @@ library
   hs-source-dirs:     src, src/Graph, src/Reward
   exposed-modules:    Graph.Tree, Graph.Forest, Reward.Ranking
   build-depends:      base >= 4.7 && < 5,
+                      HUnit,
                       network,
                       wai                 >= 3.0.0    && < 3.3,
                       wai-extra           >= 3.0.0    && < 3.1,
@@ -38,6 +39,7 @@ executable reward-system
   main-is:             Main.hs
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5,
+                       HUnit,
                        network,
                        wai,
                        wai-extra,
@@ -50,3 +52,11 @@ executable reward-system
                        scotty,
                        aeson,
                        containers
+
+test-suite test-reward-system
+  type:             exitcode-stdio-1.0
+  main-is:          MainTest.hs
+  build-depends:    HUnit, base, reward-system, containers
+  default-language: Haskell2010
+  hs-source-dirs:   tests
+  other-modules:    Graph.TreeTest, Graph.ForestTest, Reward.RankingTest
